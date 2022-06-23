@@ -30,8 +30,9 @@ byte    Battery_uC_enable_value = 0;
 String content = "";          //used for serial receive
 const byte numChars = 163;    //used for serial receive
 byte receivedBytes[numChars]; //used for serial receive
+byte rbLength = 0;                //track length of serial message received
 boolean newData = false;      //used for serial receive
-char record1;                 //used for serial receive
+//char record1;                 //used for serial receive
 //char *p, *i;                  //used for serial recieve [[DEPRECATED?]]
 
 //Set up the speed, data order and data mode
@@ -129,7 +130,7 @@ void loop() {
 
     //Recieve and handle serial inputs
     recvWithStartEndBytes(); //handles serial
-    record1 = receivedBytes; //bitches about this. char to *char    
+    receivedBytes; //bitches about this. char to *char    
     processNewData();        //parse into variables, check fault, update DACs
 }
 
@@ -138,12 +139,11 @@ void processNewData() {
     //store parced data in variables
     byte control;
     byte cell_num;
-    byte record_size = sizeof(record1);
     
-    if(record1[0]==176){//if this a control byte
-      cell_num = 1+record1[1]; //This is the previous cell number + 1 = current cell number
-      if(cell_num<=(record_size-2)){ // Prevent out-of-bounds
-        control = record1[cell_num+1]; //loaded the corresponding control byte
+    if(receivedBytes[0]==176){//if this a control byte
+      cell_num = 1+receivedBytes[1]; //This is the previous cell number + 1 = current cell number
+      if(cell_num<=(rbLength-2)){ // Prevent out-of-bounds
+        control = receivedBytes[cell_num+1]; //loaded the corresponding control byte
         Trigger_disable_value = control & B1;                   //bit 0
         digitalWrite(Trigger_disable,Trigger_disable_value);
         Charge_disable_value = (control>>1) & B1;               //bit 1
@@ -159,86 +159,86 @@ void processNewData() {
         //Bit 7 reserved for control characters
 
         //update control string with the cell_num
-        record1[1] = cell_num
+        receivedBytes[1] = cell_num;
       }
 
       //send to next cell
       Serial.write(161);
-      Serial.write(record1,record_size);
+      Serial.write(receivedBytes,rbLength);
       Serial.write(172);     
     }
-    else if (record1[0]==179){ //HV des and act
-      temp_S = String(subStr(record1, " ", 1+1)); //first byte after H is cell num
-      cell_num = temp_S.toInt(); //This is the previous cell number
-      temp_S = String(subStr(record1, " ", cell_num*1+3)); //One int per cell
-      HV_desired = temp_S.toInt(); //loaded the desired HV voltage
-
-      //update read string with the cell_num
-      cell_num = cell_num + 1;
-      sprintf(cstr, "%03d", cell_num);
-      record1[2] = cstr[0];
-      record1[3] = cstr[1];
-      record1[4] = cstr[2];
-
-      //update control string with the updated control byte
-      sprintf(cstr, "%04d", HV_condition_value);
-      record1[(cell_num-1)*5+6] = cstr[0];
-      record1[(cell_num-1)*5+7] = cstr[1];
-      record1[(cell_num-1)*5+8] = cstr[2];
-      record1[(cell_num-1)*5+9] = cstr[3];
-
-      //send to next cell
-      Serial.print("!");
-      Serial.print(record1);
-      Serial.print(",");  
-    }
-    else if (record1[0]=='B'){
-      temp_S = String(subStr(record1, " ", 1+1)); //first byte after H is cell num
-      cell_num = temp_S.toInt(); //This is the previous cell number
-      
-      //update read string with the cell_num
-      cell_num = cell_num + 1;
-      sprintf(cstr, "%03d", cell_num);
-      record1[2] = cstr[0];
-      record1[3] = cstr[1];
-      record1[4] = cstr[2];
-
-      //update control string with the updated control byte
-      sprintf(cstr, "%04d", Bus_condition_value);
-      record1[(cell_num-1)*5+6] = cstr[0];
-      record1[(cell_num-1)*5+7] = cstr[1];
-      record1[(cell_num-1)*5+8] = cstr[2];
-      record1[(cell_num-1)*5+9] = cstr[3];
-
-      //send to next cell
-      Serial.print("!");
-      Serial.print(record1);
-      Serial.print(","); 
-      
-    }
-    else if (record1[0]=='T'){
-      temp_S = String(subStr(record1, " ", 1+1)); //first byte after H is cell num
-      cell_num = temp_S.toInt(); //This is the previous cell number
-      
-      //update read string with the cell_num
-      cell_num = cell_num + 1;
-      sprintf(cstr, "%03d", cell_num);
-      record1[2] = cstr[0];
-      record1[3] = cstr[1];
-      record1[4] = cstr[2];
-
-      //update control string with the updated control byte
-      sprintf(cstr, "%04d", TS3_value);
-      record1[(cell_num-1)*5+6] = cstr[0];
-      record1[(cell_num-1)*5+7] = cstr[1];
-      record1[(cell_num-1)*5+8] = cstr[2];
-      record1[(cell_num-1)*5+9] = cstr[3];
-
-      //send to next cell
-      Serial.print("!");
-      Serial.print(record1);
-      Serial.print(","); 
-    }
+//    else if (record1[0]==179){ //HV des and act
+//      temp_S = String(subStr(record1, " ", 1+1)); //first byte after H is cell num
+//      cell_num = temp_S.toInt(); //This is the previous cell number
+//      temp_S = String(subStr(record1, " ", cell_num*1+3)); //One int per cell
+//      HV_desired = temp_S.toInt(); //loaded the desired HV voltage
+//
+//      //update read string with the cell_num
+//      cell_num = cell_num + 1;
+//      sprintf(cstr, "%03d", cell_num);
+//      record1[2] = cstr[0];
+//      record1[3] = cstr[1];
+//      record1[4] = cstr[2];
+//
+//      //update control string with the updated control byte
+//      sprintf(cstr, "%04d", HV_condition_value);
+//      record1[(cell_num-1)*5+6] = cstr[0];
+//      record1[(cell_num-1)*5+7] = cstr[1];
+//      record1[(cell_num-1)*5+8] = cstr[2];
+//      record1[(cell_num-1)*5+9] = cstr[3];
+//
+//      //send to next cell
+//      Serial.print("!");
+//      Serial.print(record1);
+//      Serial.print(",");  
+//    }
+//    else if (record1[0]=='B'){
+//      temp_S = String(subStr(record1, " ", 1+1)); //first byte after H is cell num
+//      cell_num = temp_S.toInt(); //This is the previous cell number
+//      
+//      //update read string with the cell_num
+//      cell_num = cell_num + 1;
+//      sprintf(cstr, "%03d", cell_num);
+//      record1[2] = cstr[0];
+//      record1[3] = cstr[1];
+//      record1[4] = cstr[2];
+//
+//      //update control string with the updated control byte
+//      sprintf(cstr, "%04d", Bus_condition_value);
+//      record1[(cell_num-1)*5+6] = cstr[0];
+//      record1[(cell_num-1)*5+7] = cstr[1];
+//      record1[(cell_num-1)*5+8] = cstr[2];
+//      record1[(cell_num-1)*5+9] = cstr[3];
+//
+//      //send to next cell
+//      Serial.print("!");
+//      Serial.print(record1);
+//      Serial.print(","); 
+//      
+//    }
+//    else if (record1[0]=='T'){
+//      temp_S = String(subStr(record1, " ", 1+1)); //first byte after H is cell num
+//      cell_num = temp_S.toInt(); //This is the previous cell number
+//      
+//      //update read string with the cell_num
+//      cell_num = cell_num + 1;
+//      sprintf(cstr, "%03d", cell_num);
+//      record1[2] = cstr[0];
+//      record1[3] = cstr[1];
+//      record1[4] = cstr[2];
+//
+//      //update control string with the updated control byte
+//      sprintf(cstr, "%04d", TS3_value);
+//      record1[(cell_num-1)*5+6] = cstr[0];
+//      record1[(cell_num-1)*5+7] = cstr[1];
+//      record1[(cell_num-1)*5+8] = cstr[2];
+//      record1[(cell_num-1)*5+9] = cstr[3];
+//
+//      //send to next cell
+//      Serial.print("!");
+//      Serial.print(record1);
+//      Serial.print(","); 
+//    }
 
     newData = false;
   }
@@ -262,7 +262,7 @@ void recvWithStartEndBytes() {
         }
       }
       else {
-        receivedBytes[ndx] = '\0';            // terminate the string
+        rbLength = ndx;
         recvInProgress = false;
         ndx = 0;
         newData = true;
@@ -274,15 +274,15 @@ void recvWithStartEndBytes() {
   }
 }
 
-// Function to return a substring defined by a delimiter at an index
-char* subStr (char* str, char *delim, int index) {
-  char *act, *sub, *ptr;
-  static char copy[MAX_STRING_LEN];
-  int i;
-  strcpy(copy, str);
-  for (i = 1, act = copy; i <= index; i++, act = NULL) {
-     sub = strtok_r(act, delim, &ptr);
-     if (sub == NULL) break;
-  }
-  return sub;
-}
+//// Function to return a substring defined by a delimiter at an index
+//char* subStr (char* str, char *delim, int index) {
+//  char *act, *sub, *ptr;
+//  static char copy[MAX_STRING_LEN];
+//  int i;
+//  strcpy(copy, str);
+//  for (i = 1, act = copy; i <= index; i++, act = NULL) {
+//     sub = strtok_r(act, delim, &ptr);
+//     if (sub == NULL) break;
+//  }
+//  return sub;
+//}
