@@ -1,6 +1,5 @@
 // Version 0: Initial release, 5/2/2022 M. Kemp
 
-
 #include <SPI.h>
 #include <string.h>
 #define MAX_STRING_LEN  406    //used for serial recieve
@@ -28,12 +27,12 @@ byte    Coil1_enable_value = 0;
 byte    Coil2_enable_value = 0;
 byte    Battery_uC_enable_value = 0;
 
-String content = "";          //used for serial recieve
-const byte numChars = 406;    //used for serial recieve
-char receivedBytes[numChars]; //used for serial recieve
-boolean newData = false;      //used for serial recieve
-char *record1;                //used for serial recieve
-char *p, *i;                  //used for serial recieve
+String content = "";          //used for serial receive
+const byte numChars = 163;    //used for serial receive
+byte receivedBytes[numChars]; //used for serial receive
+boolean newData = false;      //used for serial receive
+char record1;                 //used for serial receive
+//char *p, *i;                  //used for serial recieve [[DEPRECATED?]]
 
 //Set up the speed, data order and data mode
 //SettingsB is AD5270, <50 MHz, MSB first, sample on falling clock
@@ -137,50 +136,38 @@ void loop() {
 void processNewData() {
   if (newData == true) {
     //store parced data in variables
-    String temp_S;
     byte control;
     byte cell_num;
-    char cstr[5];
+    byte record_size = sizeof(record1);
     
-    if(record1[0]=='C'){//if this a control byte
-      temp_S = String(subStr(record1, " ", 1+1)); //first byte after C is cell num
-      cell_num = temp_S.toInt(); //This is the previous cell number
-      temp_S = String(subStr(record1, " ", cell_num+3));
-      control = temp_S.toInt(); //loaded the corresponding control byte
-      Trigger_disable_value = control & B1;                   //bit 0
-      digitalWrite(Trigger_disable,Trigger_disable_value);
-      Charge_disable_value = (control>>1) & B1;               //bit 1
-      digitalWrite(Charge_disable,Charge_disable_value);
-      Coil1_enable_value = (control>>2) & B1;                 //bit 2
-      digitalWrite(Coil1_enable,Coil1_enable_value);
-      Coil2_enable_value = (control>>3) & B1;                 //bit 3
-      digitalWrite(Coil2_enable,Coil2_enable_value);
-      Battery_uC_enable_value = (control>>4) & B1;            //bit 4
-      digitalWrite(Battery_uC_enable,Battery_uC_enable_value);
-      control = (control|B00100000) & (B11011111 | ((B00000000 | (Stat1_value&B1))<<5));//bit 5
-      control = (control|B01000000) & (B10111111 | ((B00000000 | (Stat2_value&B1))<<6));//bit 6
-      //Bit 7 unused for now
+    if(record1[0]==176){//if this a control byte
+      cell_num = 1+record1[1]; //This is the previous cell number + 1 = current cell number
+      if(cell_num<=(record_size-2)){ // Prevent out-of-bounds
+        control = record1[cell_num+1]; //loaded the corresponding control byte
+        Trigger_disable_value = control & B1;                   //bit 0
+        digitalWrite(Trigger_disable,Trigger_disable_value);
+        Charge_disable_value = (control>>1) & B1;               //bit 1
+        digitalWrite(Charge_disable,Charge_disable_value);
+        Coil1_enable_value = (control>>2) & B1;                 //bit 2
+        digitalWrite(Coil1_enable,Coil1_enable_value);
+        Coil2_enable_value = (control>>3) & B1;                 //bit 3
+        digitalWrite(Coil2_enable,Coil2_enable_value);
+        Battery_uC_enable_value = (control>>4) & B1;            //bit 4
+        digitalWrite(Battery_uC_enable,Battery_uC_enable_value);
+        // control = (control|B00100000) & (B11011111 | ((B00000000 | (Stat1_value&B1))<<5));//bit 5
+        // control = (control|B01000000) & (B10111111 | ((B00000000 | (Stat2_value&B1))<<6));//bit 6
+        //Bit 7 reserved for control characters
 
-      //update control string with the cell_num
-      
-      cell_num = cell_num + 1;
-      sprintf(cstr, "%03d", cell_num);
-      record1[2] = cstr[0];
-      record1[3] = cstr[1];
-      record1[4] = cstr[2];
-
-      //update control string with the updated control byte
-      sprintf(cstr, "%03d", control);
-      record1[(cell_num)*4+2] = cstr[0];
-      record1[(cell_num)*4+2+1] = cstr[1];
-      record1[(cell_num)*4+2+2] = cstr[2];
+        //update control string with the cell_num
+        record1[1] = cell_num
+      }
 
       //send to next cell
-      Serial.print("!");
-      Serial.print(record1);
-      Serial.print(",");     
+      Serial.write(161);
+      Serial.write(record1,record_size);
+      Serial.write(172);     
     }
-    else if (record1[0]=='H'){ //HV des and act
+    else if (record1[0]==179){ //HV des and act
       temp_S = String(subStr(record1, " ", 1+1)); //first byte after H is cell num
       cell_num = temp_S.toInt(); //This is the previous cell number
       temp_S = String(subStr(record1, " ", cell_num*1+3)); //One int per cell
@@ -261,9 +248,9 @@ void processNewData() {
 void recvWithStartEndBytes() {
   static boolean recvInProgress = false;
   static byte ndx = 0;                      
-  char startByte = '!';                // <- start byte  is a '!'
-  char endByte = ',';                  // <- stop byte   is a ','
-  char rb;                            
+  byte startByte = 161;                // <- start byte  is a '¡'
+  byte endByte = 172;                  // <- stop byte   is a '¬'
+  byte rb;                            
   while (Serial.available() > 0 && newData == false) {
    rb = Serial.read();
    if (recvInProgress == true) {
