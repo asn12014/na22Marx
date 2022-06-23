@@ -2,7 +2,7 @@
 
 #include <SPI.h>
 #include <string.h>
-#define MAX_STRING_LEN  406    //used for serial recieve
+//#define MAX_STRING_LEN  406    //used for serial recieve
 
 //Pin definitions
 #define CS_1 2
@@ -27,13 +27,10 @@ byte    Coil1_enable_value = 0;
 byte    Coil2_enable_value = 0;
 byte    Battery_uC_enable_value = 0;
 
-String content = "";          //used for serial receive
 const byte numChars = 163;    //used for serial receive
 byte receivedBytes[numChars]; //used for serial receive
 byte rbLength = 0;                //track length of serial message received
 boolean newData = false;      //used for serial receive
-//char record1;                 //used for serial receive
-//char *p, *i;                  //used for serial recieve [[DEPRECATED?]]
 
 //Set up the speed, data order and data mode
 //SettingsB is AD5270, <50 MHz, MSB first, sample on falling clock
@@ -129,8 +126,7 @@ void loop() {
     /////////////////
 
     //Recieve and handle serial inputs
-    recvWithStartEndBytes(); //handles serial
-    receivedBytes; //bitches about this. char to *char    
+    recvWithStartEndBytes(); //handles serial   
     processNewData();        //parse into variables, check fault, update DACs
 }
 
@@ -138,30 +134,36 @@ void processNewData() {
   if (newData == true) {
     //store parced data in variables
     byte control;
-    byte cell_num;
+    byte ser_type = receivedBytes[0];   // 176 - control, 179 - HV, 188 - bus voltage, 191 - temp
+    byte cell_num = receivedBytes[1]+1; //This is the previous cell number + 1 = current cell number
     
-    if(receivedBytes[0]==176){//if this a control byte
-      cell_num = 1+receivedBytes[1]; //This is the previous cell number + 1 = current cell number
-      if(cell_num<=(rbLength-2)){ // Prevent out-of-bounds
-        control = receivedBytes[cell_num+1]; //loaded the corresponding control byte
-        Trigger_disable_value = control & B1;                   //bit 0
-        digitalWrite(Trigger_disable,Trigger_disable_value);
-        Charge_disable_value = (control>>1) & B1;               //bit 1
-        digitalWrite(Charge_disable,Charge_disable_value);
-        Coil1_enable_value = (control>>2) & B1;                 //bit 2
-        digitalWrite(Coil1_enable,Coil1_enable_value);
-        Coil2_enable_value = (control>>3) & B1;                 //bit 3
-        digitalWrite(Coil2_enable,Coil2_enable_value);
-        Battery_uC_enable_value = (control>>4) & B1;            //bit 4
-        digitalWrite(Battery_uC_enable,Battery_uC_enable_value);
-        // control = (control|B00100000) & (B11011111 | ((B00000000 | (Stat1_value&B1))<<5));//bit 5
-        // control = (control|B01000000) & (B10111111 | ((B00000000 | (Stat2_value&B1))<<6));//bit 6
-        //Bit 7 reserved for control characters
-
-        //update control string with the cell_num
-        receivedBytes[1] = cell_num;
+    if (ser_type==176) {//if this is a control byte
+      if(cell_num==101){ // serial input with cell ID 100 is interpreted as global parameter. all cells read cel1 #1 params 
+        control = receivedBytes[2];   //read cell#1 params, do not change cell ID
       }
+      else if (cell_num<=(rbLength-2)) { // Prevent out-of-bounds
+        control = receivedBytes[cell_num+1]; //read designated cell params
+        receivedBytes[1] = cell_num; //increment cell ID
+      }
+      else {
+        control = 0; //safeguard in case it tries to read out of bounds
+      }
+      Trigger_disable_value = control & B1;                   //bit 0
+      digitalWrite(Trigger_disable,Trigger_disable_value);
+      Charge_disable_value = (control>>1) & B1;               //bit 1
+      digitalWrite(Charge_disable,Charge_disable_value);
+      Coil1_enable_value = (control>>2) & B1;                 //bit 2
+      digitalWrite(Coil1_enable,Coil1_enable_value);
+      Coil2_enable_value = (control>>3) & B1;                 //bit 3
+      digitalWrite(Coil2_enable,Coil2_enable_value);
+      Battery_uC_enable_value = (control>>4) & B1;            //bit 4
+      digitalWrite(Battery_uC_enable,Battery_uC_enable_value);
+      // control = (control|B00100000) & (B11011111 | ((B00000000 | (Stat1_value&B1))<<5));//bit 5
+      // control = (control|B01000000) & (B10111111 | ((B00000000 | (Stat2_value&B1))<<6));//bit 6
+      // Bit 7 reserved for control characters
 
+      //update control string with the cell_num
+    
       //send to next cell
       Serial.write(161);
       Serial.write(receivedBytes,rbLength);
@@ -273,16 +275,3 @@ void recvWithStartEndBytes() {
     }
   }
 }
-
-//// Function to return a substring defined by a delimiter at an index
-//char* subStr (char* str, char *delim, int index) {
-//  char *act, *sub, *ptr;
-//  static char copy[MAX_STRING_LEN];
-//  int i;
-//  strcpy(copy, str);
-//  for (i = 1, act = copy; i <= index; i++, act = NULL) {
-//     sub = strtok_r(act, delim, &ptr);
-//     if (sub == NULL) break;
-//  }
-//  return sub;
-//}
