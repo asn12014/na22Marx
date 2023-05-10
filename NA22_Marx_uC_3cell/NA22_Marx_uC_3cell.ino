@@ -9,24 +9,24 @@
 #define CS_1 2
 #define Charge_disable 3
 #define Trigger_disable 4
-#define Coil1_enable 5
-#define Coil2_enable 6
-#define Battery_uC_enable 7
-#define Stat1 8
-#define Stat2 9
+//#define Coil1_enable 5
+//#define Coil2_enable 6
+//#define Battery_uC_enable 7
+//#define Stat1 8
+//#define Stat2 9
 
 //program global variables
-byte    Stat1_value = 0;
-byte    Stat2_value = 0;
+//byte    Stat1_value = 0;
+//byte    Stat2_value = 0;
 int     HV_condition_value = 0;
 int     Bus_condition_value = 0;
 int     TS3_value = 0;
 int     HV_desired = 1023;    //default to lowest output voltage, 2^10-1 counts
 byte    Charge_disable_value = 1;
 byte    Trigger_disable_value = 1;
-byte    Coil1_enable_value = 0;
-byte    Coil2_enable_value = 0;
-byte    Battery_uC_enable_value = 0;
+//byte    Coil1_enable_value = 0;
+//byte    Coil2_enable_value = 0;
+//byte    Battery_uC_enable_value = 0;
 
 String content = "";          //used for serial recieve
 const byte numChars = 406;    //used for serial recieve
@@ -46,14 +46,14 @@ void setup() {
   digitalWrite(Charge_disable,HIGH);      //Set to disable
   pinMode(Trigger_disable, OUTPUT);
   digitalWrite(Trigger_disable,HIGH);     //Set to disable
-  pinMode(Coil1_enable, OUTPUT);
-  digitalWrite(Coil1_enable,LOW);         //Set to disable
-  pinMode(Coil2_enable, OUTPUT);
-  digitalWrite(Coil2_enable,LOW);         //Set to disable
-  pinMode(Battery_uC_enable, OUTPUT);
-  digitalWrite(Battery_uC_enable,LOW);    //Set to disable
-  pinMode(Stat1, INPUT);
-  pinMode(Stat2, INPUT);
+//  pinMode(Coil1_enable, OUTPUT);
+//  digitalWrite(Coil1_enable,LOW);         //Set to disable
+//  pinMode(Coil2_enable, OUTPUT);
+//  digitalWrite(Coil2_enable,LOW);         //Set to disable
+//  pinMode(Battery_uC_enable, OUTPUT);
+//  digitalWrite(Battery_uC_enable,LOW);    //Set to disable
+//  pinMode(Stat1, INPUT);
+//  pinMode(Stat2, INPUT);
   digitalWrite(CS_1,HIGH);                //Set to disable
   digitalWrite(CS_1,LOW);                //Set to disable
   digitalWrite(CS_1,HIGH);                //Set to disable
@@ -92,8 +92,8 @@ void setup() {
 //Main loop
 void loop() {
     //Read stat1 and stat2 and set global values
-    Stat1_value = digitalRead(Stat1);
-    Stat2_value = digitalRead(Stat2);
+//    Stat1_value = digitalRead(Stat1);
+//    Stat2_value = digitalRead(Stat2);
 
     //Read analog values
     int    temp = 0;
@@ -151,14 +151,14 @@ void processNewData() {
       digitalWrite(Trigger_disable,Trigger_disable_value);
       Charge_disable_value = (control>>1) & B1;               //bit 1
       digitalWrite(Charge_disable,Charge_disable_value);
-      Coil1_enable_value = (control>>2) & B1;                 //bit 2
-      digitalWrite(Coil1_enable,Coil1_enable_value);
-      Coil2_enable_value = (control>>3) & B1;                 //bit 3
-      digitalWrite(Coil2_enable,Coil2_enable_value);
-      Battery_uC_enable_value = (control>>4) & B1;            //bit 4
-      digitalWrite(Battery_uC_enable,Battery_uC_enable_value);
-      control = (control|B00100000) & (B11011111 | ((B00000000 | (Stat1_value&B1))<<5));//bit 5
-      control = (control|B01000000) & (B10111111 | ((B00000000 | (Stat2_value&B1))<<6));//bit 6
+//      Coil1_enable_value = (control>>2) & B1;                 //bit 2
+//      digitalWrite(Coil1_enable,Coil1_enable_value);
+//      Coil2_enable_value = (control>>3) & B1;                 //bit 3
+//      digitalWrite(Coil2_enable,Coil2_enable_value);
+//      Battery_uC_enable_value = (control>>4) & B1;            //bit 4
+//      digitalWrite(Battery_uC_enable,Battery_uC_enable_value);
+//      control = (control|B00100000) & (B11011111 | ((B00000000 | (Stat1_value&B1))<<5));//bit 5
+//      control = (control|B01000000) & (B10111111 | ((B00000000 | (Stat2_value&B1))<<6));//bit 6
       //Bit 7 unused for now
 
       //update control string with the cell_num
