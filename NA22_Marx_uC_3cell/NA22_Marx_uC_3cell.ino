@@ -138,7 +138,7 @@ void processNewData() {
     byte cell_num = receivedBytes[1]+1; //This is the previous cell number + 1 = current cell number
     
     if (ser_type==176) {//if this is a control byte
-      if(cell_num==101){ // serial input with cell ID 100 is interpreted as global parameter. all cells read cel1 #1 params 
+      if (cell_num==101) { // serial input with cell ID 100 is interpreted as global parameter. all cells read cel1 #1 params 
         control = receivedBytes[2];   //read cell#1 params, do not change cell ID
       }
       else if (cell_num<=(rbLength-2)) { // Prevent out-of-bounds
@@ -148,6 +148,12 @@ void processNewData() {
       else {
         control = 0; //safeguard in case it tries to read out of bounds
       }
+      
+      //send to next cell
+      Serial.write(161);
+      Serial.write(receivedBytes,rbLength);
+      Serial.write(172); 
+      
       Trigger_disable_value = control & B1;                   //bit 0
       digitalWrite(Trigger_disable,Trigger_disable_value);
       Charge_disable_value = (control>>1) & B1;               //bit 1
@@ -160,27 +166,25 @@ void processNewData() {
       digitalWrite(Battery_uC_enable,Battery_uC_enable_value);
       // control = (control|B00100000) & (B11011111 | ((B00000000 | (Stat1_value&B1))<<5));//bit 5
       // control = (control|B01000000) & (B10111111 | ((B00000000 | (Stat2_value&B1))<<6));//bit 6
-      // Bit 7 reserved for control characters
-
-      //update control string with the cell_num
-    
-      //send to next cell
-      Serial.write(161);
-      Serial.write(receivedBytes,rbLength);
-      Serial.write(172);     
+      // Bit 7 reserved for control characters    
     }
-//    else if (record1[0]==179){ //HV des and act
+    else if (ser_type==179) {//HV des and act
+      if (cell_num==101) {//cell ID 100 = global parameter. all cells read cel1 #1 params 
+        HV_desired = (receivedBytes[2] & B01111111) + 
+          (128*(receivedBytes[3] & B00000111)); //data split across 2 consecutive bytes w/ 8th bit always reserved
+      else if (cell_num<=(rbLength-2)) { // Prevent out-of-bounds
+        HV_desired = (receivedBytes[2*num_cells] & B01111111) + 
+          (128*(receivedBytes[2*num_cells+1] & B00000111)); //read designated cell params
+        receivedBytes[1] = cell_num; //increment cell ID
+      }
+      else {
+        HV_desired = 1023; //safeguard in case it tries to read out of bounds
+      }
 //      temp_S = String(subStr(record1, " ", 1+1)); //first byte after H is cell num
 //      cell_num = temp_S.toInt(); //This is the previous cell number
 //      temp_S = String(subStr(record1, " ", cell_num*1+3)); //One int per cell
 //      HV_desired = temp_S.toInt(); //loaded the desired HV voltage
 //
-//      //update read string with the cell_num
-//      cell_num = cell_num + 1;
-//      sprintf(cstr, "%03d", cell_num);
-//      record1[2] = cstr[0];
-//      record1[3] = cstr[1];
-//      record1[4] = cstr[2];
 //
 //      //update control string with the updated control byte
 //      sprintf(cstr, "%04d", HV_condition_value);
