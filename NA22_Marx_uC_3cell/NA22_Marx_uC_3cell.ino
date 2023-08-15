@@ -2,6 +2,7 @@
 
 
 #include <SPI.h>
+#include <EEPROM.h>
 #include <string.h>
 #define MAX_STRING_LEN  406    //used for serial recieve
 
@@ -40,11 +41,14 @@ char *p, *i;                  //used for serial recieve
 SPISettings settingsB(5000000, MSBFIRST, SPI_MODE1); 
 
 void setup() {
+  OSCCAL = EEPROM.read(0); // 8MHz recalibration byte must be stored in address 0 of EEPROM by rc_calib protocol
+  SPI.begin();                            //Initialize SPI
   Serial.begin(38400);        // Initialize serial communication at 38400 bits per second
-  pinMode(CS_1, OUTPUT);      //CS1 for U2, rheostat for Vout control
+  pinMode(0, INPUT); // MAYBE? 23-07-06 r1 fix attempt
   pinMode(Charge_disable, OUTPUT);
-  digitalWrite(Charge_disable,HIGH);      //Set to disable
   pinMode(Trigger_disable, OUTPUT);
+  pinMode(CS_1, OUTPUT);      //CS1 for U2, rheostat for Vout control
+  digitalWrite(Charge_disable,HIGH);      //Set to disable
   digitalWrite(Trigger_disable,HIGH);     //Set to disable
 //  pinMode(Coil1_enable, OUTPUT);
 //  digitalWrite(Coil1_enable,LOW);         //Set to disable
@@ -57,7 +61,6 @@ void setup() {
   digitalWrite(CS_1,HIGH);                //Set to disable
   digitalWrite(CS_1,LOW);                //Set to disable
   digitalWrite(CS_1,HIGH);                //Set to disable
-  SPI.begin();                            //Initialize SPI
   delay(1000);
 
   /////////
