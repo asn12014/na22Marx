@@ -2,7 +2,7 @@
 
 
 #include <SPI.h>
-#include <EEPROM.h>
+// #include <EEPROM.h>
 #include <string.h>
 #define MAX_STRING_LEN  406    //used for serial recieve
 
@@ -41,7 +41,7 @@ char *p, *i;                  //used for serial recieve
 SPISettings settingsB(5000000, MSBFIRST, SPI_MODE1); 
 
 void setup() {
-  OSCCAL = EEPROM.read(0); // 8MHz recalibration byte must be stored in address 0 of EEPROM by rc_calib protocol
+//  OSCCAL = EEPROM.read(0); // 8MHz recalibration byte must be stored in address 0 of EEPROM by rc_calib protocol
   SPI.begin();                            //Initialize SPI
   Serial.begin(38400);        // Initialize serial communication at 38400 bits per second
   pinMode(0, INPUT); // MAYBE? 23-07-06 r1 fix attempt
